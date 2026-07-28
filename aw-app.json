@@ -17,7 +17,6 @@
   "permissions": [
     "routes:register",
     "db:own-tables",
-    "ui:code",
     "ui:slots:core.nav.workspace"
   ],
 
@@ -25,17 +24,12 @@
     "routes": [{ "prefix": "/api/apps/whiteboard" }],
     "windows": [
       { "id": "whiteboard.main", "title": "Whiteboard",
-        "body": { "type": "component" } }
+        "body": { "type": "declarative", "spec": "windows/main.json" } }
     ],
     "nav": [
       { "id": "whiteboard.nav", "label": "Whiteboard", "icon": "square",
         "section": "workspace", "opens": "whiteboard.main" }
-    ],
-    "frontend": {
-      "mode": "component",
-      "bundle": "ui/dist/whiteboard-ui.mjs",
-      "slots": ["core.nav.workspace"]
-    }
+    ]
   },
 
   "config_schema": {

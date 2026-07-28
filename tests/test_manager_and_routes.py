@@ -128,6 +128,34 @@ def test_presentation_roundtrip_501_when_unconfigured(client):
     assert resp2.status_code == 501
 
 
+def test_window_spec_endpoints_are_registered(mgr, tmp_path):
+    """windows/main.json (the declarative window the nav entry opens, per F6
+    Cap 2) must reference real routes on this app's own FastAPI sub-app —
+    a stale path here would 404 silently inside the SPA's iframe/button
+    widgets with no test ever catching it. Checked against the route table
+    directly (not invoked) so this doesn't depend on a real Playwright
+    install for the screenshot button."""
+    import json as _json
+
+    browser = WhiteboardBrowser(str(tmp_path))
+    app = routes_mod.build_routes(FakeCtx(), mgr, browser, str(tmp_path), "http://127.0.0.1:9030")
+    registered = {(r.methods and next(iter(r.methods - {"HEAD"})), r.path) for r in app.routes if hasattr(r, "methods")}
+    registered |= {("GET", r.path) for r in app.routes if not hasattr(r, "methods")}  # websocket routes
+
+    spec = _json.loads((ROOT / "windows" / "main.json").read_text())
+    for region in spec["regions"]:
+        for widget in region["widgets"]:
+            if widget["type"] == "iframe":
+                path = widget["src"].removeprefix("/api/apps/whiteboard")
+                template = path.replace("main", "{board_id}")
+                assert ("GET", template) in registered, f"iframe src {path!r} has no matching route"
+            elif widget["type"] == "button":
+                method, path = widget["action"]["call"].split(" ", 1)
+                path = path.removeprefix("/api/apps/whiteboard")
+                template = path.replace("main", "{board_id}")
+                assert (method, template) in registered, f"button call {path!r} has no matching route"
+
+
 def test_websocket_init_and_set_broadcast(client):
     with client.websocket_connect("/ws") as ws:
         init = ws.receive_json()

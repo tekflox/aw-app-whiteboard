@@ -17,11 +17,23 @@ Same pattern as `tekflox/aw-app-git`'s ongoing Repos/PRs migration
 consumes the same shared framework capability: app-registered backend
 routes/WebSocket + app-contributed view/nav.
 
-## Status: **backend + storage + agent-piloted browser ported and tested; frontend/nav registration BLOCKED on a framework capability that does not exist yet**
+## Status: **backend + storage + agent-piloted browser + nav/window all live and tested. Parity reached for the card's scope (persistent live-synced canvas + window + nav); the `aw-whiteboard` MCP stays pointed at the monolith (see nuance section) — diff tooling was never part of Whiteboard, it moved to `aw-app-git` per this card's instructions.**
 
-Per the executor instructions on this card: when the framework piece isn't
-there, scaffold what can be scaffolded and stop — don't fake the nav/WS
-registration.
+2026-07-28 update: the previous run of this card left nav/window registration
+blocked on F6 Capability 2 (SPA plugin-host wiring) not being live. That's
+since shipped — `aw-frontend/src/App.jsx` now calls `installPluginHost()` +
+`fetchContributions()` on mount, and `<AppSlot slot="core.nav.workspace"/>`
+renders in `WorkspaceNav.jsx` (confirmed by reading the current code, not
+just the ADR). Rather than wait further on the **component**-mode path (still
+gated on real marketplace signing per `loadPlugin.js`'s `effectiveMode` — an
+unsigned app is auto-downgraded to iframe regardless), this app's window now
+declares `body.type: "declarative"` (`windows/main.json`, same pattern as
+`aw-app-git`/`aw-app-proxy`) with an `iframe` widget pointing at this app's
+own already-working `GET /view/{board_id}` viewer shell, plus two buttons for
+the monolith window's export-PNG / save-to-presentation actions (backed by
+routes that were already ported and tested). This is the wired, working path
+today — no signing story needed — and is what `test_window_spec_endpoints_are_registered`
+checks against the real route table so a stale path here can't silently 404.
 
 ### Done
 
@@ -56,20 +68,31 @@ registration.
 - `whiteboard_app/plugin.py` — `WhiteboardAppPlugin` entrypoint.
 - `ui/src/WhiteboardWindow.jsx` — ported **verbatim** (byte-identical
   logic, only API paths updated) from `aw-frontend/src/components/`,
-  staged here as the source for the eventual `ui:code` component bundle
-  (F6d pattern). **Not yet wired into a buildable plugin package** — see
-  Blocked below.
-- `aw-app.json` — declares the target end-state manifest (`routes:register`,
-  `db:own-tables`, `ui:code`, `ui:slots:core.nav.workspace`,
-  `contributes.nav` with `section: "workspace"` — Whiteboard lives in the
-  WorkspaceNav flyout today, not the top bar — and
-  `contributes.frontend.mode: "component"`) matching where the F6 ADR says
-  this class of app is headed. Validates against `schemas/aw-app.schema.json`.
-- Tests: `tests/test_manager_and_routes.py` (7 tests, real `FastAPI
+  kept as source for a future **component**-mode bundle (richer chrome:
+  drag-resize, pop-out) once this app is marketplace-signed — see the
+  "Deferred: component mode" note below. **Superseded for now** by the
+  declarative window below, which is the actually-wired path today.
+- `windows/main.json` — the declarative window spec (F1 body type) opened
+  by the `whiteboard.nav` WorkspaceNav-flyout entry: an `iframe` widget on
+  `GET /view/{board_id}` (this app's live-synced viewer shell — the exact
+  parity requirement, `WS`-driven auto-reload on every `set`/`exec_js`) plus
+  "Export PNG" / "Save to presentation" buttons wired to the already-ported
+  `POST /boards/{id}/screenshot` / `.../save_presentation` routes (the
+  monolith `WhiteboardWindow.jsx`'s chrome menu) — declarative windows'
+  widget vocabulary (`aw-frontend/src/components/AppWindow.jsx`) supports
+  both natively, no signing gate.
+- `aw-app.json` — `routes:register`, `db:own-tables`,
+  `ui:slots:core.nav.workspace` (nav lives in the WorkspaceNav flyout, same
+  as the monolith); `windows[0].body` is now `{type: "declarative", spec:
+  "windows/main.json"}` (was `component`, see status note above) — dropped
+  `ui:code` and the `contributes.frontend` block since the declarative path
+  needs neither. Validates against `schemas/aw-app.schema.json`.
+- Tests: `tests/test_manager_and_routes.py` (8 tests, real `FastAPI
   TestClient` against an in-memory-sqlite fake `ctx.db` — board CRUD, the
   viewer shell, the 501-degrade presentation round-trip, WS init +
-  set-broadcast) + `tests/validate_manifest.py`. All passing
-  (`.venv/aw/bin/python -m pytest tests/` → `7 passed`).
+  set-broadcast, and `windows/main.json`'s iframe/button paths checked
+  against the real route table) + `tests/validate_manifest.py`. All passing
+  (`.venv/aw/bin/python -m pytest tests/` → `8 passed`).
 
 ### What was deliberately NOT ported as a straight copy
 
@@ -87,60 +110,55 @@ registration.
   whiteboard has none either (unlike `github.py`'s watchdog), nothing to
   port.
 
-### Blocked — the missing framework piece
+### Previously blocked — now resolved (2026-07-28)
 
-**Capability 2 of the F6 ADR — app-contributed view + nav in the SPA — is
-not wired into the live `aw-frontend` shell.** Confirmed by reading the
-code, not just the ADR: `aw-frontend/src/App.jsx` never calls
-`installPluginHost()` or `fetchContributions()`, and no `<AppSlot>` renders
-anywhere outside `apps/__tests__`. The library (`aw-frontend/src/apps/`:
-`slotRegistry`, `pluginHost`, `loadPlugin`, `AppSlot`, `appsApi`) exists and
-is unit-tested, but it is inert in the running app — even `aw-app-git`'s
-existing declarative `nav`/`windows` entries don't render today.
+F6 Capability 2 (app-contributed view + nav in the SPA) is live:
+`aw-frontend/src/App.jsx` calls `installPluginHost()` + `fetchContributions()`
+on mount, and `WorkspaceNav.jsx` renders `<AppSlot slot="core.nav.workspace"/>`
+in the flyout — the `whiteboard.nav` entry now mounts there and opens
+`windows/main.json` for real, same wiring `aw-app-git`/`aw-app-proxy` already
+rely on. This unblocks everything the previous run of this card listed as
+blocked, via the declarative path rather than the component one:
 
-On top of that, the parent ADR
-(`docs/knowledge_base/docs/architecture/decoupled-apps-f6-repos-prs-migration.md`)
-that specifies exactly this capability is still
-**`Status: Proposed (awaiting Frederico's approval — do not implement
-before approval)`** — so even if this app's job were to wire `App.jsx`
-itself, that ADR explicitly says not to build it pre-approval.
-
-Concretely, this blocks:
-
-- Registering the "Whiteboard" WorkspaceNav-flyout item as an app
-  contribution (would need `<AppSlot slot="core.nav.workspace" />`
-  rendered in the shell, which isn't there).
-- Shipping `ui/dist/whiteboard-ui.mjs` as a real component bundle — no
-  point building it before there's a host to load it into. `ui/src/*` is
-  kept as the ported source, ready to become a Vite lib build once F6b
-  (SPA wiring) ships. Note also the trust gate in
-  `aw-frontend/src/apps/loadPlugin.js` (`effectiveMode`): component mode
-  is only honored for a **signed** app granted `ui:code` — an unsigned
-  side-loaded install of this app would be auto-downgraded to iframe mode
-  regardless, so even after F6b ships, this app also needs a signing story
-  (or an accepted iframe degrade) before the rich component UI (export PNG,
-  save-to-presentation menu) actually renders.
+- **Nav + window render** — done, real, tested against the route table
+  (`test_window_spec_endpoints_are_registered`).
 - **Removing the static `WhiteboardWindow.jsx` / WorkspaceNav "Whiteboard"
-  entry from `aw-frontend`** — deliberately **not done** in this card.
-  Removing the only working path to Whiteboard with no framework
-  replacement live would break the feature for users, which the executor
-  instructions explicitly say not to fake. Do this in the same follow-up as
-  F6b, once `<AppSlot core.nav.workspace/>` actually renders
-  app-contributed nav entries.
-- The monolith's `src/api/routes/whiteboard.py` + `whiteboard_manager.py`
-  + `whiteboard_browser.py` stay as-is for now too, same reasoning as F6e's
-  "legacy monolith dashboard stays frozen until strangled" — it's what
-  aw-frontend and the `aw-whiteboard` MCP currently talk to; nothing
-  consumes `/api/apps/whiteboard/*` yet.
+  entry from `aw-frontend`, and freezing the monolith's
+  `whiteboard.py`/`whiteboard_manager.py`/`whiteboard_browser.py`** —
+  deliberately **still not done** in this card. Per P3 (strangler-fig) and
+  P5.1 (parity on a real BYOD workspace is the exit criterion), the monolith
+  route only gets marked frozen and the static SPA piece only gets removed
+  once this app has actually been installed and proven on a live BYOD
+  workspace — not from a code review alone. No workspace was available to
+  install into for this card (same "NOT done here" scope as the previous
+  run). Follow-up: install, click through Export PNG / Save to presentation
+  / live-sync-across-two-tabs on a real workspace, then freeze+remove.
 
-**What would unblock this app specifically** (once F6/Capability 2 ships,
-approval permitting): wire `App.jsx`'s `installPluginHost()` +
-`fetchContributions()` + `<AppSlot slot="core.nav.workspace"/>` in the
-WorkspaceNav flyout, build `ui/` into a real Vite lib bundle exporting
-`register(host)` (mirrors F6d's plan for `git-ui.mjs`), resolve the signing
-question above, bump this app's `frontend.bundle` version, then remove the
-static `WhiteboardWindow.jsx`/nav entry from `aw-frontend` and the monolith
-routes once nothing points at them anymore.
+### Deferred: component mode (richer chrome)
+
+`ui/src/WhiteboardWindow.jsx` is kept as source for a future **component**-
+mode bundle (drag-resize, a real pop-out window, an integrated toolbar
+instead of two plain buttons) — closer to the monolith's exact chrome. Not
+built now: `loadPlugin.js`'s `effectiveMode` gate only honors component mode
+for a **signed** app granted `ui:code`, and real marketplace signing (F8) is
+still W3+ work; an unsigned install downgrades to iframe regardless, so
+there's no functional gain over the declarative window shipped here until
+signing lands. Revisit together with `aw-app-git`'s and
+`aw-app-presentations`' equivalent component-mode plans.
+
+### Known framework gap (not specific to this app, not blocking)
+
+`AppWindow.jsx`'s `iframe` widget renders `<iframe src={widget.src}>` with
+the raw manifest-declared path, unlike `fetch()`/`WebSocket`, which
+`apiBase.js` transparently rewrites to the BYOD workspace API host on a
+`<slug>.workspace.<apex>` SPA. On the single-tenant dashboard (same-origin,
+`BASES.api` empty) this is a no-op and the iframe works today as tested; on
+a cloud workspace SPA host the relative `/api/apps/whiteboard/view/main` src
+would resolve against the SPA's own static host instead of the workspace,
+breaking the canvas. This is a pre-existing gap in `apiBase.js`/
+`AppWindow.jsx` that affects any app shipping an `iframe` window widget, not
+something whiteboard-specific to fix here — flagging per the M1 step-3
+protocol rather than hacking a per-app workaround into this card.
 
 ## The `aw-whiteboard` MCP nuance (mapped, not resolved)
 
@@ -195,8 +213,11 @@ card per the "PARE e reporte" instruction.
 - `whiteboard_app/viewer.py` — the live viewer shell HTML (`VIEWER_SHELL`).
 - `whiteboard_app/routes.py` — FastAPI sub-app (REST + `WS /ws`).
 - `whiteboard_app/plugin.py` — `WhiteboardAppPlugin` entrypoint.
-- `ui/src/WhiteboardWindow.jsx` — ported frontend source, not yet built
-  into a plugin bundle (blocked, see above).
+- `windows/main.json` — declarative window spec (`iframe` + export/save
+  buttons), resolved into `body.spec_data` by the runtime and rendered by
+  `AppWindow.jsx` when `whiteboard.nav` is clicked.
+- `ui/src/WhiteboardWindow.jsx` — ported frontend source, deferred
+  component-mode bundle (see "Deferred: component mode" above).
 - `tests/validate_manifest.py`, `tests/test_manager_and_routes.py`.
 
 ## Testing done
@@ -204,21 +225,27 @@ card per the "PARE e reporte" instruction.
 1. **Manifest validation**: `.venv/aw/bin/python tests/validate_manifest.py`
    → `OK: aw-app.json is valid and all system_clis installers exist`.
 2. **Manager + routes**: `.venv/aw/bin/python -m pytest tests/` →
-   `7 passed` — board create/ensure/get/list/set/delete, the viewer shell
+   `8 passed` — board create/ensure/get/list/set/delete, the viewer shell
    serving the right WS/HTML URLs, WS `whiteboard_init` + `whiteboard_update`
-   broadcast on a `set`, and the presentation round-trip's clean `501` when
-   unconfigured. Against a faked `ctx.db` (in-memory sqlite, same `{table}`/
-   `ON CONFLICT` SQL shape the real Postgres `DbTables` facade uses — same
-   pattern `aw-app-presentations` validated with).
+   broadcast on a `set`, the presentation round-trip's clean `501` when
+   unconfigured, and `windows/main.json`'s iframe/button paths checked
+   against the real registered route table. Against a faked `ctx.db`
+   (in-memory sqlite, same `{table}`/`ON CONFLICT` SQL shape the real
+   Postgres `DbTables` facade uses — same pattern `aw-app-presentations`
+   validated with).
 
 ## NOT done here (explicitly out of scope)
 
-- No install into any workspace — Frederico installs manually after
-  reviewing this, once the framework blocker above clears enough for the
-  UI to actually appear.
+- No install into any real workspace, and no live-BYOD parity proof — this
+  card's evidence is code + tests against a faked `ctx`, same as the
+  `aw-app-git`/`aw-app-presentations` precedent; installing and freezing the
+  monolith route is the deferred follow-up (see "Previously blocked" above).
 - No real Playwright browser exercised end-to-end (no live workspace to run
   it in for this card) — `browser.py` is a faithful behavioral port,
   covered by reading/diffing against the monolith original, not a live
   screenshot-taking run.
-- No marketplace signing — `ui:code` in the manifest is aspirational per
-  the trust-gate note above; a side-loaded install downgrades to iframe.
+- No marketplace signing / component-mode bundle build — deferred, see
+  "Deferred: component mode" above; the declarative window shipped here
+  needs neither.
+- The `apiBase.js` iframe-src rewrite gap (see "Known framework gap" above)
+  — cross-app framework fix, not this card's scope.
