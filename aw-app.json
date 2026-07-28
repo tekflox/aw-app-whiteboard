@@ -2,36 +2,54 @@
   "manifest_version": 1,
   "id": "whiteboard",
   "name": "Whiteboard",
-  "version": "0.1.0",
-  "description": "Persistent, live-synced HTML canvas — set/patch content, broadcast changes over a WebSocket to every open viewer, round-trip with a presentation. Migrated from the aw monolith (src/api/routes/whiteboard.py + whiteboard_manager.py + WhiteboardWindow.jsx).",
+  "version": "0.2.0",
+  "description": "Persistent, live-synced HTML canvas \u2014 set/patch content, broadcast changes over a WebSocket to every open viewer, round-trip with a presentation. Migrated from the aw monolith (src/api/routes/whiteboard.py + whiteboard_manager.py + WhiteboardWindow.jsx).",
   "tier": "inprocess",
   "publisher": "TekFlox",
-  "resource_estimate": { "cpu": "medium", "memory": "~450 MB", "disk": "~350 MB" },
-
+  "resource_estimate": {
+    "cpu": "medium",
+    "memory": "~450 MB",
+    "disk": "~350 MB"
+  },
   "runtime": {
     "python": ">=3.11",
     "entrypoint": "whiteboard_app.plugin:WhiteboardAppPlugin",
-    "pip_requires": ["playwright>=1.40", "httpx>=0.24"]
+    "pip_requires": [
+      "playwright>=1.40",
+      "httpx>=0.24"
+    ]
   },
-
   "permissions": [
     "routes:register",
     "db:own-tables",
     "ui:slots:core.nav.workspace"
   ],
-
   "contributes": {
-    "routes": [{ "prefix": "/api/apps/whiteboard" }],
+    "routes": [
+      {
+        "prefix": "/api/apps/whiteboard"
+      }
+    ],
     "windows": [
-      { "id": "whiteboard.main", "title": "Whiteboard",
-        "body": { "type": "declarative", "spec": "windows/main.json" } }
+      {
+        "id": "whiteboard.main",
+        "title": "Whiteboard",
+        "body": {
+          "type": "declarative",
+          "spec": "windows/main.json"
+        }
+      }
     ],
     "nav": [
-      { "id": "whiteboard.nav", "label": "Whiteboard", "icon": "square",
-        "section": "workspace", "opens": "whiteboard.main" }
+      {
+        "id": "whiteboard.nav",
+        "label": "Whiteboard",
+        "icon": "square",
+        "section": "workspace",
+        "opens": "whiteboard.main"
+      }
     ]
   },
-
   "config_schema": {
     "type": "object",
     "properties": {
@@ -42,13 +60,11 @@
       },
       "presentation_api_base": {
         "type": "string",
-        "description": "Base URL of a presentation API to round-trip boards with (load_presentation/save_presentation). aw-workspace does not ship one yet — see README. Leave unset to disable the round-trip (returns 501)."
+        "description": "Base URL of a presentation API to round-trip boards with (load_presentation/save_presentation). aw-workspace does not ship one yet \u2014 see README. Leave unset to disable the round-trip (returns 501)."
       }
     },
     "required": []
   },
-
   "dependencies": {},
-
   "migrations": {}
 }
