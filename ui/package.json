@@ -1,0 +1,6 @@
+{
+  "name": "aw-app-whiteboard-ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ported frontend source for aw-app-whiteboard. NOT yet built into a plugin bundle — blocked on aw-frontend wiring installPluginHost()/fetchContributions()/<AppSlot> (see repo README, 'Blocked' section). src/ mirrors aw-frontend/src/components/WhiteboardWindow.jsx verbatim (paths updated to this app's own /api/apps/whiteboard/* routes), staged for the F6d Vite-lib-build pattern once there is a live plugin host to load into."
+}
