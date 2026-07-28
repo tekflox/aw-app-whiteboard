@@ -22,8 +22,7 @@
   },
   "permissions": [
     "routes:register",
-    "db:own-tables",
-    "ui:slots:core.nav.workspace"
+    "db:own-tables"
   ],
   "contributes": {
     "routes": [
@@ -39,15 +38,6 @@
           "type": "declarative",
           "spec": "windows/main.json"
         }
-      }
-    ],
-    "nav": [
-      {
-        "id": "whiteboard.nav",
-        "label": "Whiteboard",
-        "icon": "square",
-        "section": "workspace",
-        "opens": "whiteboard.main"
       }
     ]
   },
