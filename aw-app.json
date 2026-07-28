@@ -9,7 +9,7 @@
   "resource_estimate": {
     "cpu": "medium",
     "memory": "medium",
-    "disk": "~350 MB"
+    "disk": "medium"
   },
   "runtime": {
     "python": ">=3.11",
