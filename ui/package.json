@@ -1,6 +1,14 @@
 {
-  "name": "aw-app-whiteboard-ui",
+  "name": "whiteboard-app-ui",
   "version": "0.1.0",
   "private": true,
-  "description": "Ported frontend source for aw-app-whiteboard. NOT yet built into a plugin bundle — blocked on aw-frontend wiring installPluginHost()/fetchContributions()/<AppSlot> (see repo README, 'Blocked' section). src/ mirrors aw-frontend/src/components/WhiteboardWindow.jsx verbatim (paths updated to this app's own /api/apps/whiteboard/* routes), staged for the F6d Vite-lib-build pattern once there is a live plugin host to load into."
+  "type": "module",
+  "description": "Component-mode frontend for aw-app-whiteboard — the Whiteboard row inside the Workspace nav popover, ported from aw-workspace-ui's hardcoded WorkspaceNav.jsx block and registered into the core.nav.workspace slot. src/plugin.jsx is the integrated-mode entry (register(host)), built as a Vite lib-mode bundle consumed by aw-app.json's contributes.frontend.bundle. The full floating-window body (src/WhiteboardWindow.jsx) stays staged/unbuilt here — the framework doesn't support component-mode WINDOW bodies yet, only nav slots (see that file's own header comment) — the window itself is still owned by aw-workspace-ui's own (now correctly-routed) WhiteboardWindow.jsx.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
 }
