@@ -36,9 +36,9 @@
       {
         "id": "whiteboard.main",
         "title": "Whiteboard",
+        "icon": "square",
         "body": {
-          "type": "declarative",
-          "spec": "windows/main.json"
+          "type": "component"
         }
       }
     ],
@@ -46,7 +46,8 @@
       "mode": "component",
       "bundle": "ui/dist/whiteboard.js",
       "slots": [
-        "core.nav.workspace"
+        "core.nav.workspace",
+        "core.window.body:whiteboard.main"
       ]
     }
   },

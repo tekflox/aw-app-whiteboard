@@ -1,12 +1,15 @@
 {
   "name": "whiteboard-app-ui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Component-mode frontend for aw-app-whiteboard — the Whiteboard row inside the Workspace nav popover, ported from aw-workspace-ui's hardcoded WorkspaceNav.jsx block and registered into the core.nav.workspace slot. src/plugin.jsx is the integrated-mode entry (register(host)), built as a Vite lib-mode bundle consumed by aw-app.json's contributes.frontend.bundle. The full floating-window body (src/WhiteboardWindow.jsx) stays staged/unbuilt here — the framework doesn't support component-mode WINDOW bodies yet, only nav slots (see that file's own header comment) — the window itself is still owned by aw-workspace-ui's own (now correctly-routed) WhiteboardWindow.jsx.",
+  "description": "Component-mode frontend for aw-app-whiteboard — owns BOTH the Whiteboard row inside the Workspace nav popover (core.nav.workspace) AND the full floating window body (core.window.body:whiteboard.main, toolbar + live-synced iframe), per the 2026-08-04 decision that aw-workspace-ui must carry zero app-specific window/nav logic. src/plugin.jsx is the integrated-mode entry (register(host)), built as a Vite lib-mode bundle consumed by aw-app.json's contributes.frontend.bundle.",
   "scripts": {
     "dev": "vite",
     "build": "vite build"
+  },
+  "dependencies": {
+    "html-to-image": "^1.11.11"
   },
   "devDependencies": {
     "vite": "^5.4.0"
