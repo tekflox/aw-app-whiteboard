@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "id": "whiteboard",
   "name": "Whiteboard",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Persistent, live-synced HTML canvas \u2014 set/patch content, broadcast changes over a WebSocket to every open viewer, round-trip with a presentation. Migrated from the aw monolith (src/api/routes/whiteboard.py + whiteboard_manager.py + WhiteboardWindow.jsx).",
   "tier": "inprocess",
   "requires_ui_refresh": true,
