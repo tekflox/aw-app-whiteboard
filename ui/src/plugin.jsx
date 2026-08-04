@@ -90,7 +90,10 @@ export function register(host) {
   // ------------------------------------------------------------------
   function WhiteboardWindowBody({ windowKey, onMaximize, isMaximized }) {
     const boardId = 'main';
-    const viewUrl = host.app.apiUrl(`/view/${encodeURIComponent(boardId)}`);
+    // Absolute URL required here — <iframe src> and window.open() are
+    // resolved directly by the browser, bypassing the fetch/XHR-only
+    // apiBase.js rewrite shim a relative apiUrl() depends on.
+    const viewUrl = host.app.absoluteApiUrl(`/view/${encodeURIComponent(boardId)}`);
     const iframeRef = useRef(null);
     const [saving, setSaving] = useState(false);
     const [saveOpen, setSaveOpen] = useState(false);

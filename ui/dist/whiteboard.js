@@ -529,7 +529,7 @@ function Qe(e) {
     );
   }
   function s({ windowKey: c, onMaximize: l, isMaximized: u }) {
-    const m = "main", w = e.app.apiUrl(`/view/${encodeURIComponent(m)}`), x = r(null), [E, A] = t(!1), [te, U] = t(!1), [C, O] = t(""), [D, g] = t(null), H = n(async (y) => {
+    const m = "main", w = e.app.absoluteApiUrl(`/view/${encodeURIComponent(m)}`), x = r(null), [E, A] = t(!1), [te, U] = t(!1), [C, O] = t(""), [D, g] = t(null), H = n(async (y) => {
       A(!0), g(null);
       try {
         const p = y && C.trim() ? { presentation_id: C.trim() } : {}, d = await (await e.sdk.api.fetch(
