@@ -128,32 +128,33 @@ def test_presentation_roundtrip_501_when_unconfigured(client):
     assert resp2.status_code == 501
 
 
-def test_window_spec_endpoints_are_registered(mgr, tmp_path):
-    """windows/main.json (the declarative window the nav entry opens, per F6
-    Cap 2) must reference real routes on this app's own FastAPI sub-app —
-    a stale path here would 404 silently inside the SPA's iframe/button
-    widgets with no test ever catching it. Checked against the route table
-    directly (not invoked) so this doesn't depend on a real Playwright
-    install for the screenshot button."""
-    import json as _json
+def test_window_body_endpoints_are_registered(mgr, tmp_path):
+    """ui/src/plugin.jsx's WhiteboardWindowBody hardcodes calls against this
+    app's own FastAPI sub-app (host.app.apiUrl('/view/...'), '.../save_
+    presentation') — a stale path here would 404 silently inside the SPA's
+    iframe/toolbar with no test ever catching it, since that window body
+    is a compiled JS bundle, not a declarative spec file this test could
+    load and walk (the app used to ship windows/main.json for exactly that
+    reason; 2026-08-04's component-mode window-body migration dropped it —
+    see BasicWindow.jsx in aw-workspace-ui). Regex-scan the source instead
+    of loading a spec, checked against the route table directly (not
+    invoked) so this doesn't depend on a real Playwright install."""
+    import re as _re
 
     browser = WhiteboardBrowser(str(tmp_path))
     app = routes_mod.build_routes(FakeCtx(), mgr, browser, str(tmp_path), "http://127.0.0.1:9030")
     registered = {(r.methods and next(iter(r.methods - {"HEAD"})), r.path) for r in app.routes if hasattr(r, "methods")}
     registered |= {("GET", r.path) for r in app.routes if not hasattr(r, "methods")}  # websocket routes
 
-    spec = _json.loads((ROOT / "windows" / "main.json").read_text())
-    for region in spec["regions"]:
-        for widget in region["widgets"]:
-            if widget["type"] == "iframe":
-                path = widget["src"].removeprefix("/api/apps/whiteboard")
-                template = path.replace("main", "{board_id}")
-                assert ("GET", template) in registered, f"iframe src {path!r} has no matching route"
-            elif widget["type"] == "button":
-                method, path = widget["action"]["call"].split(" ", 1)
-                path = path.removeprefix("/api/apps/whiteboard")
-                template = path.replace("main", "{board_id}")
-                assert (method, template) in registered, f"button call {path!r} has no matching route"
+    source = (ROOT / "ui" / "src" / "plugin.jsx").read_text()
+    calls = [
+        ("GET", "/view/${encodeURIComponent(boardId)}"),
+        ("POST", "/boards/${encodeURIComponent(boardId)}/save_presentation"),
+    ]
+    for method, literal_path in calls:
+        assert literal_path in source, f"plugin.jsx no longer calls {literal_path!r} — update this test too"
+        template = _re.sub(r"\$\{[^}]*\}", "{board_id}", literal_path)
+        assert (method, template) in registered, f"plugin.jsx call {literal_path!r} has no matching route"
 
 
 def test_websocket_init_and_set_broadcast(client):
