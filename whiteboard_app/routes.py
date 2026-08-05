@@ -224,6 +224,15 @@ def build_routes(ctx, mgr: WhiteboardManager, browser: WhiteboardBrowser,
     def _presentation_base() -> str | None:
         return (ctx.config or {}).get("presentation_api_base")
 
+    def _workspace_api_key_headers() -> dict:
+        """``X-Api-Key`` for the outbound presentation-API call, read straight
+        from the environment (``AW_WORKSPACE_API_KEY``, set by aw-workspace's
+        ``src.api.workspace_api_key`` on every generate/regenerate) — no
+        ``config_schema`` field needed, nothing for a human to configure.
+        Empty dict if unset (older workspace without the key yet)."""
+        key = os.environ.get("AW_WORKSPACE_API_KEY")
+        return {"X-Api-Key": key} if key else {}
+
     @api.post("/boards/{board_id}/load_presentation")
     async def load_presentation(board_id: str, data: dict = Body(...)):
         base = _presentation_base()
@@ -237,7 +246,7 @@ def build_routes(ctx, mgr: WhiteboardManager, browser: WhiteboardBrowser,
             raise HTTPException(status_code=400, detail="presentation_id is required")
         import httpx
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(f"{base}/api/presentation/{pid}")
+            resp = await client.get(f"{base}/api/presentation/{pid}", headers=_workspace_api_key_headers())
         if resp.status_code != 200:
             raise HTTPException(status_code=404, detail=f"presentation '{pid}' not found")
         pres = resp.json()
@@ -265,7 +274,8 @@ def build_routes(ctx, mgr: WhiteboardManager, browser: WhiteboardBrowser,
         import httpx
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.put(f"{base}/api/presentation/{pid}",
-                                    json={"title": title, "html": board.html})
+                                    json={"title": title, "html": board.html},
+                                    headers=_workspace_api_key_headers())
         if resp.status_code >= 400:
             raise HTTPException(status_code=resp.status_code, detail="presentation save failed")
         mgr.set_html(board_id, board.html, source_presentation_id=pid)

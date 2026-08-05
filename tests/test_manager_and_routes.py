@@ -128,6 +128,82 @@ def test_presentation_roundtrip_501_when_unconfigured(client):
     assert resp2.status_code == 501
 
 
+class _FakeResponse:
+    def __init__(self, status_code, json_body=None):
+        self.status_code = status_code
+        self._json_body = json_body or {}
+
+    def json(self):
+        return self._json_body
+
+
+class _FakeAsyncClient:
+    """Captures the last request's headers so tests can assert on them,
+    without pulling in a real HTTP mocking dependency."""
+
+    calls: list = []
+
+    def __init__(self, *a, **k):
+        pass
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *a):
+        return False
+
+    async def get(self, url, headers=None):
+        _FakeAsyncClient.calls.append(("GET", url, headers or {}))
+        return _FakeResponse(200, {"html": "<p>loaded</p>", "title": "Loaded"})
+
+    async def put(self, url, json=None, headers=None):
+        _FakeAsyncClient.calls.append(("PUT", url, headers or {}))
+        return _FakeResponse(200)
+
+
+@pytest.fixture
+def configured_client(mgr, tmp_path, monkeypatch):
+    monkeypatch.setattr("httpx.AsyncClient", _FakeAsyncClient)
+    _FakeAsyncClient.calls = []
+    ctx = FakeCtx()
+    ctx.config = {"presentation_api_base": "http://fake-presentations"}
+    browser = WhiteboardBrowser(str(tmp_path))
+    app = routes_mod.build_routes(ctx, mgr, browser, str(tmp_path), "http://127.0.0.1:9030")
+    return TestClient(app)
+
+
+def test_load_presentation_sends_workspace_api_key_header(configured_client, monkeypatch):
+    monkeypatch.setenv("AW_WORKSPACE_API_KEY", "the-shared-key")
+
+    resp = configured_client.post("/boards/main/load_presentation", json={"presentation_id": "x"})
+
+    assert resp.status_code == 200
+    method, url, headers = _FakeAsyncClient.calls[-1]
+    assert method == "GET"
+    assert headers.get("X-Api-Key") == "the-shared-key"
+
+
+def test_save_presentation_sends_workspace_api_key_header(configured_client, monkeypatch):
+    monkeypatch.setenv("AW_WORKSPACE_API_KEY", "the-shared-key")
+    configured_client.put("/boards/main", json={"html": "<p>x</p>"})
+
+    resp = configured_client.post("/boards/main/save_presentation", json={"presentation_id": "x"})
+
+    assert resp.status_code == 200
+    method, url, headers = _FakeAsyncClient.calls[-1]
+    assert method == "PUT"
+    assert headers.get("X-Api-Key") == "the-shared-key"
+
+
+def test_no_api_key_header_when_env_var_unset(configured_client, monkeypatch):
+    monkeypatch.delenv("AW_WORKSPACE_API_KEY", raising=False)
+
+    configured_client.post("/boards/main/load_presentation", json={"presentation_id": "x"})
+
+    method, url, headers = _FakeAsyncClient.calls[-1]
+    assert "X-Api-Key" not in headers
+
+
 def test_window_body_endpoints_are_registered(mgr, tmp_path):
     """ui/src/plugin.jsx's WhiteboardWindowBody hardcodes calls against this
     app's own FastAPI sub-app (host.app.apiUrl('/view/...'), '.../save_
