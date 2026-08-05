@@ -1,43 +1,23 @@
-# aw-app-whiteboard
+# Whiteboard
 
-Workspace app for persistent, live-synced HTML whiteboards that agents and
-users can view, edit, point at, and pilot through browser automation.
+Whiteboard adds persistent, live-synced HTML boards to an AW Workspace. It gives users and agents a shared visual surface for diagrams, notes, sketches, plans, and generated visual content.
 
-## Features
+## What It Does
 
-- Whiteboard CRUD and status routes.
-- WebSocket broadcast for live viewer updates.
-- Persistent board content stored through `ctx.db`.
-- Agent-piloted Playwright browser actions for a board.
-- Declarative workspace window with an iframe viewer and action buttons.
-- Optional presentation load/save integration through a configured API base.
+- Creates and stores named whiteboards.
+- Opens a whiteboard window from the workspace navigation.
+- Syncs board updates live to open viewers.
+- Supports full HTML content for rich visual layouts.
+- Lets boards be updated directly or patched in place.
 
-## Status
+## Why Use It
 
-Backend routes, storage, browser helper logic, and the declarative window are
-implemented and covered by tests. Install and live workspace validation are
-handled outside this repository.
+Use this app when a task needs a visual workspace instead of plain text. It is useful for diagrams, workflow maps, planning boards, collaborative notes, UX sketches, and agent-generated visual explanations.
 
-## Layout
+## How To Use It
 
-- `aw-app.json` - manifest for the `whiteboard` app.
-- `schemas/aw-app.schema.json` - local structural validator.
-- `whiteboard_app/manager.py` - board storage and broadcast manager.
-- `whiteboard_app/browser.py` - Playwright browser controller.
-- `whiteboard_app/viewer.py` - live viewer shell HTML.
-- `whiteboard_app/routes.py` - FastAPI sub-app with REST and WebSocket
-  routes.
-- `whiteboard_app/plugin.py` - plugin entrypoint.
-- `windows/main.json` - declarative window spec.
-- `ui/src/WhiteboardWindow.jsx` - frontend source for a richer window.
-- `tests/validate_manifest.py` - manifest validation.
-- `tests/test_manager_and_routes.py` - manager and route coverage.
+Install the app and open Whiteboard from the workspace navigation. Use the default board or create a named board for a specific topic. Users and agents can update the board while viewers see changes live.
 
-## Testing
+## What It Delivers
 
-```bash
-.venv/aw/bin/python tests/validate_manifest.py
-.venv/aw/bin/python -m pytest tests/
-```
-
-Live browser automation should also be checked in an installed workspace.
+The app gives AW Workspace a persistent visual canvas. It helps turn ideas, plans, and explanations into shared workspace artifacts that can stay available after the session ends.
