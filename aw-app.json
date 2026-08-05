@@ -49,6 +49,28 @@
         "core.nav.workspace",
         "core.window.body:whiteboard.main"
       ]
+    },
+    "mcp": {
+      "provides": [
+        "whiteboard_show_html",
+        "whiteboard_get",
+        "whiteboard_list",
+        "whiteboard_delete",
+        "whiteboard_exec_js",
+        "whiteboard_point",
+        "whiteboard_close",
+        "whiteboard_status",
+        "whiteboard_screenshot",
+        "whiteboard_browse",
+        "whiteboard_click",
+        "whiteboard_type",
+        "whiteboard_key",
+        "whiteboard_scroll",
+        "whiteboard_eval",
+        "whiteboard_browser_close",
+        "whiteboard_load_presentation",
+        "whiteboard_save_presentation"
+      ]
     }
   },
   "config_schema": {

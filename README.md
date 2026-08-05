@@ -21,3 +21,7 @@ Install the app and open Whiteboard from the workspace navigation. Use the defau
 ## What It Delivers
 
 The app gives AW Workspace a persistent visual canvas. It helps turn ideas, plans, and explanations into shared workspace artifacts that can stay available after the session ends.
+
+## MCP Server
+
+`mcp_server/` ships a standalone stdio MCP that lets an agent drive Whiteboard from outside the workspace process, authenticating with the workspace's shared API key instead of a browser session. See `mcp_server/README.md` for setup and the full tool list, and `docs/app-workspace-api-auth.md` in `tekflox/aw-app-template` for the general pattern any app/MCP can reuse to call an aw-workspace API.
