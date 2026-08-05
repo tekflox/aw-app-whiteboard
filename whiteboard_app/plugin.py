@@ -32,6 +32,7 @@ import os
 from . import routes as routes_mod
 from .browser import WhiteboardBrowser
 from .manager import WhiteboardManager
+from .mcp import self_register as mcp_self_register
 
 log = logging.getLogger("aw_apps.whiteboard")
 
@@ -47,12 +48,17 @@ class WhiteboardAppPlugin:
         os.makedirs(shot_dir, exist_ok=True)
         self._shot_dir = shot_dir
 
-        own_base_url = f"http://127.0.0.1:{os.environ.get('AW_PORT', '9030')}"
+        port = int(os.environ.get("AW_PORT", "9030"))
+        own_base_url = f"http://127.0.0.1:{port}"
         self.browser = WhiteboardBrowser(shot_dir)
 
         subapp = routes_mod.build_routes(ctx, self.mgr, self.browser, shot_dir, own_base_url)
         ctx.routes.register(subapp)
         ctx.on_deactivate(self._teardown)
+
+        # Discoverable by aw-mcp-gateway's app-scan — see mcp/self_register.py.
+        mcp_self_register.register_self(ctx.package_dir, port)
+
         log.info("aw-app-whiteboard activated")
 
     async def deactivate(self) -> None:

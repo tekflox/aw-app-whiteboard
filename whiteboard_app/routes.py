@@ -282,6 +282,37 @@ def build_routes(ctx, mgr: WhiteboardManager, browser: WhiteboardBrowser,
         return {"success": True, "presentation_id": pid, "action": "saved"}
 
     # ------------------------------------------------------------------
+    # MCP — Streamable HTTP, auto-discovered by aw-mcp-gateway's app-scan
+    # (see mcp/self_register.py + mcp/http_handler.py). Guarded by the same
+    # IdentityGuard every other route here is (X-Api-Key or an identity JWT
+    # both work — see docs/app-workspace-api-auth.md in aw-app-template).
+    # ------------------------------------------------------------------
+
+    @api.post("/mcp")
+    async def mcp_post(data: dict | list = Body(...)):
+        from fastapi.responses import JSONResponse, Response
+
+        from .mcp.http_handler import handle_request as mcp_handle_request
+
+        messages = data if isinstance(data, list) else [data]
+        responses = []
+        for m in messages:
+            r = await mcp_handle_request(
+                m, mgr=mgr, browser=browser, shot_dir=shot_dir,
+                own_base_url=own_base_url, presentation_api_base=_presentation_base(),
+            )
+            if r is not None:
+                responses.append(r)
+        if not responses:
+            return Response(status_code=202)
+        return JSONResponse(responses if isinstance(data, list) else responses[0])
+
+    @api.get("/mcp")
+    async def mcp_get():
+        from fastapi.responses import Response
+        return Response(status_code=405)
+
+    # ------------------------------------------------------------------
     # WebSocket — live sync
     # ------------------------------------------------------------------
 

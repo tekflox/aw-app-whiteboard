@@ -51,6 +51,7 @@
       ]
     },
     "mcp": {
+      "reload_on_save": true,
       "provides": [
         "whiteboard_show_html",
         "whiteboard_get",
