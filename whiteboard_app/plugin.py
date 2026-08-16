@@ -50,7 +50,7 @@ class WhiteboardAppPlugin:
 
         port = int(os.environ.get("AW_PORT", "9030"))
         own_base_url = f"http://127.0.0.1:{port}"
-        self.browser = WhiteboardBrowser(shot_dir)
+        self.browser = WhiteboardBrowser(shot_dir, own_base_url)
 
         subapp = routes_mod.build_routes(ctx, self.mgr, self.browser, shot_dir, own_base_url)
         ctx.routes.register(subapp)

@@ -15,6 +15,7 @@ import asyncio
 import logging
 import os
 import time
+from urllib.parse import urlparse
 
 logger = logging.getLogger("whiteboard_app.browser")
 
@@ -23,9 +24,42 @@ logger = logging.getLogger("whiteboard_app.browser")
 _VIEWPORT = {"width": 1280, "height": 800}
 
 
+def workspace_api_headers(url: str, own_base_url: str) -> dict:
+    """``X-Api-Key`` for a request to THIS workspace, and an empty dict for
+    anything else.
+
+    The board's own HTML lives behind ``/api/apps/whiteboard/...``, which the
+    runtime's IdentityGuard gates. A headless browser carries no session, so it
+    fetched the 401 body and screenshotted *that* — a valid PNG of
+    ``{"error": "unauthorized"}``, returned with a path and a byte count, which
+    is why it read as working for weeks.
+
+    Scoped to our own origin ON PURPOSE. Playwright's ``extra_http_headers``
+    apply to every request a context makes, and ``browse`` accepts an arbitrary
+    URL — so setting the key unconditionally would hand this workspace's API
+    key to whatever site someone browsed to. That would be a worse bug than the
+    one this fixes.
+    """
+    if not own_base_url:
+        return {}                       # unknown own origin -> fail closed
+    try:
+        target, own = urlparse(url), urlparse(own_base_url)
+    except ValueError:
+        return {}
+    # Compare the parsed ORIGIN, not a string prefix. `url.startswith(own)`
+    # accepts "http://127.0.0.1:9030.evil.test/" — same leading characters,
+    # entirely different host — which would send the key exactly where it must
+    # never go.
+    if (target.scheme, target.netloc) != (own.scheme, own.netloc):
+        return {}
+    key = os.environ.get("AW_WORKSPACE_API_KEY")
+    return {"X-Api-Key": key} if key else {}
+
+
 class WhiteboardBrowser:
-    def __init__(self, shot_dir: str):
+    def __init__(self, shot_dir: str, own_base_url: str = ""):
         self._shot_dir = shot_dir
+        self._own_base_url = own_base_url.rstrip("/")
         self._pw = None
         self._sessions: dict[str, dict] = {}   # board_id -> {browser, context, page}
         self._lock = asyncio.Lock()
@@ -53,6 +87,11 @@ class WhiteboardBrowser:
                     url = default_url
             if url:
                 page = s["page"]
+                # Per navigation rather than on the context: the same page is
+                # reused for later browse() calls to arbitrary URLs, and a
+                # header set on the context would follow them there.
+                await page.set_extra_http_headers(
+                    workspace_api_headers(url, self._own_base_url))
                 try:
                     await page.goto(url, wait_until="networkidle", timeout=20000)
                 except Exception:
