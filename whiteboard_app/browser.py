@@ -56,6 +56,40 @@ def workspace_api_headers(url: str, own_base_url: str) -> dict:
     return {"X-Api-Key": key} if key else {}
 
 
+def screenshot_url(url: str, output_path: str, width: int, height: int,
+                   scale: float, full_page: bool, wait_ms: int,
+                   own_base_url: str = "") -> None:
+    """Synchronous headless-chromium screenshot of ``url``, run in a worker
+    thread. THE one copy — ``routes.py`` and ``mcp/http_handler.py`` both call
+    this.
+
+    They used to hold a byte-identical copy each, and the divergence is exactly
+    how the unauthorized-PNG bug survived its own fix: routes.py got the
+    ``X-Api-Key`` and the MCP handler — the copy every agent actually reaches —
+    did not, so the screenshot kept coming back as a picture of
+    ``{"detail":"unauthorized"}`` with the fix apparently deployed.
+    """
+    from playwright.sync_api import sync_playwright
+
+    headers = workspace_api_headers(url, own_base_url)
+    with sync_playwright() as p:
+        browser = p.chromium.launch(args=["--no-sandbox"])
+        try:
+            context = browser.new_context(viewport={"width": width, "height": height},
+                                          device_scale_factor=scale,
+                                          extra_http_headers=headers)
+            page = context.new_page()
+            try:
+                page.goto(url, wait_until="networkidle", timeout=20000)
+            except Exception:
+                page.goto(url, wait_until="load", timeout=20000)
+            if wait_ms:
+                page.wait_for_timeout(wait_ms)
+            page.screenshot(path=output_path, full_page=full_page)
+        finally:
+            browser.close()
+
+
 class WhiteboardBrowser:
     def __init__(self, shot_dir: str, own_base_url: str = ""):
         self._shot_dir = shot_dir

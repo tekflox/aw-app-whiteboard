@@ -28,41 +28,11 @@ from fastapi import Body, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse
 
-from .browser import WhiteboardBrowser, workspace_api_headers
+from .browser import WhiteboardBrowser, screenshot_url
 from .manager import DEFAULT_ID, WhiteboardManager
 from .viewer import VIEWER_SHELL
 
 _log = logging.getLogger("whiteboard_app.routes")
-
-
-def _screenshot_url(url: str, output_path: str, width: int, height: int,
-                    scale: float, full_page: bool, wait_ms: int,
-                    headers: dict | None = None) -> None:
-    """Synchronous headless-chromium screenshot, run in a worker thread.
-
-    ``headers`` carries the workspace ``X-Api-Key`` when ``url`` is our own —
-    the board HTML sits behind the IdentityGuard, and a browser with no session
-    fetched the 401 and screenshotted it. See ``browser.workspace_api_headers``
-    for why it is scoped rather than always-on.
-    """
-    from playwright.sync_api import sync_playwright
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(args=["--no-sandbox"])
-        try:
-            context = browser.new_context(viewport={"width": width, "height": height},
-                                           device_scale_factor=scale,
-                                           extra_http_headers=headers or {})
-            page = context.new_page()
-            try:
-                page.goto(url, wait_until="networkidle", timeout=20000)
-            except Exception:
-                page.goto(url, wait_until="load", timeout=20000)
-            if wait_ms:
-                page.wait_for_timeout(wait_ms)
-            page.screenshot(path=output_path, full_page=full_page)
-        finally:
-            browser.close()
 
 
 def build_routes(ctx, mgr: WhiteboardManager, browser: WhiteboardBrowser,
@@ -154,10 +124,9 @@ def build_routes(ctx, mgr: WhiteboardManager, browser: WhiteboardBrowser,
         height = int((data or {}).get("height") or 800)
         wait_ms = int((data or {}).get("wait_ms") or 900)
         try:
-            shot_url = _own_html_url(board_id)
-            await run_in_threadpool(_screenshot_url, shot_url, out, width, height,
-                                    2.0, full_page, wait_ms,
-                                    workspace_api_headers(shot_url, own_base_url))
+            await run_in_threadpool(screenshot_url, _own_html_url(board_id), out,
+                                    width, height, 2.0, full_page, wait_ms,
+                                    own_base_url)
         except Exception as exc:
             _log.exception("whiteboard screenshot failed for %s", board_id)
             raise HTTPException(status_code=500, detail=f"screenshot failed: {exc}") from exc

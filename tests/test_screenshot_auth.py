@@ -63,3 +63,25 @@ def test_a_different_path_on_our_own_origin_still_gets_the_key(monkeypatch):
     monkeypatch.setenv("AW_WORKSPACE_API_KEY", "secret-key")
     assert workspace_api_headers(f"{OWN}/api/apps/whiteboard/boards/x/html", OWN)
     assert workspace_api_headers(f"{OWN}/", OWN)
+
+
+def test_there_is_exactly_one_screenshot_implementation():
+    """routes.py and mcp/http_handler.py used to hold a byte-identical
+    `_screenshot_url` each. That duplication is precisely how the
+    unauthorized-PNG bug survived its own fix: the header landed in routes.py
+    while the MCP handler — the copy every agent actually reaches — kept
+    shipping a picture of {"detail":"unauthorized"}, with the fix apparently
+    deployed and verified."""
+    import os
+    import re
+    root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        "whiteboard_app")
+    defs = []
+    for dirpath, _dirs, files in os.walk(root):
+        for f in files:
+            if not f.endswith(".py"):
+                continue
+            src = open(os.path.join(dirpath, f)).read()
+            defs += [(f, m) for m in re.findall(r"^def (_?screenshot_url)\(", src, re.M)]
+    assert len(defs) == 1, f"more than one screenshot implementation: {defs}"
+    assert defs[0][0] == "browser.py"

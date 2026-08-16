@@ -28,28 +28,7 @@ from typing import Any
 from fastapi.concurrency import run_in_threadpool
 
 from ..manager import DEFAULT_ID, WhiteboardManager
-from ..browser import WhiteboardBrowser
-
-
-def _screenshot_url(url: str, output_path: str, width: int, height: int,
-                    scale: float, full_page: bool, wait_ms: int) -> None:
-    from playwright.sync_api import sync_playwright
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(args=["--no-sandbox"])
-        try:
-            context = browser.new_context(viewport={"width": width, "height": height},
-                                           device_scale_factor=scale)
-            page = context.new_page()
-            try:
-                page.goto(url, wait_until="networkidle", timeout=20000)
-            except Exception:
-                page.goto(url, wait_until="load", timeout=20000)
-            if wait_ms:
-                page.wait_for_timeout(wait_ms)
-            page.screenshot(path=output_path, full_page=full_page)
-        finally:
-            browser.close()
+from ..browser import WhiteboardBrowser, screenshot_url
 
 
 TOOLS_SCHEMA = [
@@ -401,7 +380,8 @@ async def handle_request(
         wait_ms = int(args.get("wait_ms") or 900)
         html_url = f"{own_base_url}/api/apps/whiteboard/boards/{board_id}/html"
         try:
-            await run_in_threadpool(_screenshot_url, html_url, out, width, height, 2.0, full_page, wait_ms)
+            await run_in_threadpool(screenshot_url, html_url, out, width, height,
+                                    2.0, full_page, wait_ms, own_base_url)
         except Exception as exc:
             return _err(req_id, f"screenshot failed: {exc}")
         size = os.path.getsize(out) if os.path.exists(out) else 0
