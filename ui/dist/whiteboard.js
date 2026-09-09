@@ -241,8 +241,8 @@ async function Ue(e, t) {
   for (let o = 0; o < r.length; o++) {
     const c = r[o].getAttribute("xlink:href");
     if (c) {
-      const s = e.querySelector(c), g = document.querySelector(c);
-      !s && g && !n[c] && (n[c] = await W(g, t, !0));
+      const s = e.querySelector(c), p = document.querySelector(c);
+      !s && p && !n[c] && (n[c] = await W(p, t, !0));
     }
   }
   const a = Object.values(n);
@@ -319,8 +319,8 @@ async function je(e, t) {
     e.onload = o, e.onerror = t.onImageErrorHandler ? (...s) => {
       try {
         o(t.onImageErrorHandler(...s));
-      } catch (g) {
-        i(g);
+      } catch (p) {
+        i(p);
       }
     } : i;
     const c = e;
@@ -392,19 +392,19 @@ async function Ge(e, t) {
         v(a.cssRules || []).forEach((o, i) => {
           if (o.type === CSSRule.IMPORT_RULE) {
             let c = i + 1;
-            const s = o.href, g = X(s).then((p) => J(p, t)).then((p) => Q(p).forEach((l) => {
+            const s = o.href, p = X(s).then((w) => J(w, t)).then((w) => Q(w).forEach((l) => {
               try {
                 a.insertRule(l, l.startsWith("@import") ? c += 1 : a.cssRules.length);
-              } catch (w) {
+              } catch (y) {
                 console.error("Error inserting rule from remote css", {
                   rule: l,
-                  error: w
+                  error: y
                 });
               }
-            })).catch((p) => {
-              console.error("Error loading remote css", p.toString());
+            })).catch((w) => {
+              console.error("Error loading remote css", w.toString());
             });
-            n.push(g);
+            n.push(p);
           }
         });
       } catch (o) {
@@ -469,34 +469,41 @@ async function Ze(e, t = {}) {
   return await Ye(a, t), await ne(a, t), qe(a, t), await ge(a, r, n);
 }
 async function Ne(e, t = {}) {
-  const { width: r, height: n } = Y(e, t), a = await Ze(e, t), o = await F(a), i = document.createElement("canvas"), c = i.getContext("2d"), s = t.pixelRatio || de(), g = t.canvasWidth || r, p = t.canvasHeight || n;
-  return i.width = g * s, i.height = p * s, t.skipAutoScale || he(i), i.style.width = `${g}`, i.style.height = `${p}`, t.backgroundColor && (c.fillStyle = t.backgroundColor, c.fillRect(0, 0, i.width, i.height)), c.drawImage(o, 0, 0, i.width, i.height), i;
+  const { width: r, height: n } = Y(e, t), a = await Ze(e, t), o = await F(a), i = document.createElement("canvas"), c = i.getContext("2d"), s = t.pixelRatio || de(), p = t.canvasWidth || r, w = t.canvasHeight || n;
+  return i.width = p * s, i.height = w * s, t.skipAutoScale || he(i), i.style.width = `${p}`, i.style.height = `${w}`, t.backgroundColor && (c.fillStyle = t.backgroundColor, c.fillRect(0, 0, i.width, i.height)), c.drawImage(o, 0, 0, i.width, i.height), i;
 }
 async function et(e, t = {}) {
   return (await Ne(e, t)).toDataURL();
 }
 function tt(e) {
-  var p;
+  var w;
   const { useState: t, useRef: r, useCallback: n, useEffect: a } = e.React;
   function o() {
     return /* @__PURE__ */ e.h("svg", { className: "w-3.5 h-3.5 shrink-0 text-[var(--color-text-muted)]", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ e.h("rect", { x: "3", y: "3", width: "18", height: "14", rx: "2" }), /* @__PURE__ */ e.h("path", { d: "M8 21h8M12 17v4" }));
   }
   function i() {
     return a(() => {
-      let l, w, S = !1;
+      let l, y, S = !1;
       const E = () => {
-        var x;
-        return (x = window.__awOpenAppWindow) == null ? void 0 : x.call(window, "whiteboard.main");
+        var m;
+        return (m = window.__awOpenAppWindow) == null ? void 0 : m.call(window, "whiteboard.main");
       }, R = () => {
         try {
-          l = new WebSocket(e.app.wsUrl("/ws")), l.onmessage = (x) => {
+          l = new WebSocket(e.app.wsUrl("/ws")), l.onmessage = (m) => {
             try {
-              const C = JSON.parse(x.data);
+              const C = JSON.parse(m.data);
               C.type === "whiteboard_update" && C.action === "set" && E();
             } catch {
             }
-          }, l.onclose = () => {
-            S || (w = setTimeout(R, 5e3));
+          }, l.onclose = (m) => {
+            if (m.code === 4401 || m.code === 4403 || m.code === 4426) {
+              try {
+                window.dispatchEvent(new Event("aw-auth-failed"));
+              } catch {
+              }
+              return;
+            }
+            S || (y = setTimeout(R, 5e3));
           }, l.onerror = () => {
             try {
               l.close();
@@ -504,11 +511,11 @@ function tt(e) {
             }
           };
         } catch {
-          S || (w = setTimeout(R, 5e3));
+          S || (y = setTimeout(R, 5e3));
         }
       };
       return R(), () => {
-        if (S = !0, clearTimeout(w), l) {
+        if (S = !0, clearTimeout(y), l) {
           l.onclose = null;
           try {
             l.close();
@@ -531,49 +538,49 @@ function tt(e) {
   }
   const c = /* @__PURE__ */ new Map();
   function s({ windowKey: l }) {
-    const w = "main", S = e.app.absoluteApiUrl(`/view/${encodeURIComponent(w)}`), [E, R] = t(!1), [x, C] = t(!1), [$, V] = t(""), [_, m] = t(null), A = r(null), [U, ae] = t(null), ie = n(() => {
-      m(null), C((y) => {
-        var b;
-        if (y) return !1;
-        const u = (b = A.current) == null ? void 0 : b.getBoundingClientRect();
+    const y = "main", S = e.app.absoluteApiUrl(`/view/${encodeURIComponent(y)}`), [E, R] = t(!1), [m, C] = t(!1), [$, V] = t(""), [_, g] = t(null), A = r(null), [U, ae] = t(null), ie = n(() => {
+      g(null), C((b) => {
+        var x;
+        if (b) return !1;
+        const u = (x = A.current) == null ? void 0 : x.getBoundingClientRect();
         return u && ae({ top: u.bottom + 6, right: window.innerWidth - u.right }), !0;
       });
     }, []);
     a(() => {
-      if (!x) return;
-      const y = (b) => {
+      if (!m) return;
+      const b = (x) => {
         var f, L, k;
-        (f = A.current) != null && f.contains(b.target) || (k = (L = b.target).closest) != null && k.call(L, "[data-wb-save-popover]") || C(!1);
-      }, u = (b) => {
-        b.key === "Escape" && C(!1);
+        (f = A.current) != null && f.contains(x.target) || (k = (L = x.target).closest) != null && k.call(L, "[data-wb-save-popover]") || C(!1);
+      }, u = (x) => {
+        x.key === "Escape" && C(!1);
       };
-      return document.addEventListener("mousedown", y), document.addEventListener("keydown", u), () => {
-        document.removeEventListener("mousedown", y), document.removeEventListener("keydown", u);
+      return document.addEventListener("mousedown", b), document.addEventListener("keydown", u), () => {
+        document.removeEventListener("mousedown", b), document.removeEventListener("keydown", u);
       };
-    }, [x]);
-    const B = n(async (y) => {
-      R(!0), m(null);
+    }, [m]);
+    const B = n(async (b) => {
+      R(!0), g(null);
       try {
-        const u = y && $.trim() ? { presentation_id: $.trim() } : {}, f = await (await e.sdk.api.fetch(
-          e.app.apiUrl(`/boards/${encodeURIComponent(w)}/save_presentation`),
+        const u = b && $.trim() ? { presentation_id: $.trim() } : {}, f = await (await e.sdk.api.fetch(
+          e.app.apiUrl(`/boards/${encodeURIComponent(y)}/save_presentation`),
           { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(u) }
         )).json();
-        f.success ? (m(`✓ ${f.action} "${f.presentation_id}"`), C(!1), V("")) : m(`⚠ ${f.detail || f.error || "save failed"}`);
+        f.success ? (g(`✓ ${f.action} "${f.presentation_id}"`), C(!1), V("")) : g(`⚠ ${f.detail || f.error || "save failed"}`);
       } catch (u) {
-        m(`⚠ ${u.message}`);
+        g(`⚠ ${u.message}`);
       } finally {
-        R(!1), setTimeout(() => m(null), 4e3);
+        R(!1), setTimeout(() => g(null), 4e3);
       }
     }, [$]), ce = n(async () => {
-      const y = c.get(l);
-      if (!y) {
-        m("⚠ nada para exportar"), setTimeout(() => m(null), 3e3);
+      const b = c.get(l);
+      if (!b) {
+        g("⚠ nada para exportar"), setTimeout(() => g(null), 3e3);
         return;
       }
       try {
-        const u = y.contentDocument, b = u == null ? void 0 : u.getElementById("frame"), f = b && b.contentDocument || u;
+        const u = b.contentDocument, x = u == null ? void 0 : u.getElementById("frame"), f = x && x.contentDocument || u;
         if (!f || !f.body) {
-          m("⚠ nada para exportar"), setTimeout(() => m(null), 3e3);
+          g("⚠ nada para exportar"), setTimeout(() => g(null), 3e3);
           return;
         }
         const L = await et(f.documentElement, {
@@ -582,9 +589,9 @@ function tt(e) {
           width: f.documentElement.scrollWidth,
           height: f.documentElement.scrollHeight
         }), k = document.createElement("a");
-        k.download = `whiteboard-${w}.png`, k.href = L, k.click();
+        k.download = `whiteboard-${y}.png`, k.href = L, k.click();
       } catch (u) {
-        console.error("Whiteboard export failed:", u), m("⚠ export falhou"), setTimeout(() => m(null), 4e3);
+        console.error("Whiteboard export failed:", u), g("⚠ export falhou"), setTimeout(() => g(null), 4e3);
       }
     }, [l]);
     return /* @__PURE__ */ e.h(e.React.Fragment, null, _ && /* @__PURE__ */ e.h("span", { className: "text-[10px] text-[var(--color-text-muted)] truncate max-w-[160px] mr-1" }, _), /* @__PURE__ */ e.h(
@@ -607,12 +614,12 @@ function tt(e) {
     ), /* @__PURE__ */ e.h(
       "button",
       {
-        onClick: () => window.open(S, `whiteboard-${w}`, "popup=1,width=1100,height=760"),
+        onClick: () => window.open(S, `whiteboard-${y}`, "popup=1,width=1100,height=760"),
         className: "p-1 rounded hover:bg-white/10 text-[var(--color-text-muted)]",
         title: "Pop out to new window"
       },
       /* @__PURE__ */ e.h("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2" }, /* @__PURE__ */ e.h("path", { d: "M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" }), /* @__PURE__ */ e.h("polyline", { points: "15 3 21 3 21 9" }), /* @__PURE__ */ e.h("line", { x1: "10", y1: "14", x2: "21", y2: "3" }))
-    ), x && U && e.ReactDOM.createPortal(
+    ), m && U && e.ReactDOM.createPortal(
       /* @__PURE__ */ e.h(
         "div",
         {
@@ -635,7 +642,7 @@ function tt(e) {
           "input",
           {
             value: $,
-            onChange: (y) => V(y.target.value),
+            onChange: (b) => V(b.target.value),
             placeholder: "presentation-id",
             className: "flex-1 text-[11px] bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded px-2 py-1 text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent)]"
           }
@@ -652,11 +659,11 @@ function tt(e) {
       document.body
     ));
   }
-  function g({ windowKey: l }) {
+  function p({ windowKey: l }) {
     const S = e.app.absoluteApiUrl(`/view/${encodeURIComponent("main")}`), E = r(null);
     return a(() => (c.set(l, E.current), () => c.delete(l)), [l]), /* @__PURE__ */ e.h("div", { className: "flex flex-col bg-[var(--color-bg-secondary)] h-full" }, /* @__PURE__ */ e.h("div", { className: "flex-1 relative bg-[var(--color-bg-primary)]" }, /* @__PURE__ */ e.h("iframe", { ref: E, src: S, className: "absolute inset-0 w-full h-full border-0", title: "Whiteboard" })));
   }
-  e.registerSlot("core.nav.workspace", i), e.registerWindow("whiteboard.main", g), (p = e.registerWindowActions) == null || p.call(e, "whiteboard.main", s);
+  e.registerSlot("core.nav.workspace", i), e.registerWindow("whiteboard.main", p), (w = e.registerWindowActions) == null || w.call(e, "whiteboard.main", s);
 }
 export {
   tt as default,
