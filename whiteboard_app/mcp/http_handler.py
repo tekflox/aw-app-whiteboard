@@ -441,10 +441,10 @@ async def handle_request(
             return _err(req_id, "presentation_id is required")
         import httpx
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(f"{presentation_api_base}/api/presentation/{pid}", headers=_workspace_api_key_headers())
-        if resp.status_code != 200:
+            resp = await client.get(f"{presentation_api_base}/presentations/{pid}", headers=_workspace_api_key_headers())
+        pres = resp.json() if resp.status_code == 200 else {}
+        if resp.status_code != 200 or "html" not in pres:
             return _err(req_id, f"presentation '{pid}' not found")
-        pres = resp.json()
         mgr.set_html(board_id, pres["html"], title=pres.get("title"), source_presentation_id=pid)
         board = mgr.get(board_id)
         await mgr.broadcast({"type": "whiteboard_update", "action": "set",
@@ -463,10 +463,11 @@ async def handle_request(
         title = args.get("title") or board.title
         import httpx
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.put(f"{presentation_api_base}/api/presentation/{pid}",
+            resp = await client.put(f"{presentation_api_base}/presentations/{pid}",
                                     json={"title": title, "html": board.html},
                                     headers=_workspace_api_key_headers())
-        if resp.status_code >= 400:
+        ok = resp.status_code == 200 and resp.json().get("success", True)
+        if not ok:
             return _err(req_id, "presentation save failed")
         mgr.set_html(board_id, board.html, source_presentation_id=pid)
         return _ok(req_id, f"Whiteboard '{board_id}' saved presentation '{pid}'.")

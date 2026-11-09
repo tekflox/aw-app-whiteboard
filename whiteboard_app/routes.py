@@ -225,10 +225,10 @@ def build_routes(ctx, mgr: WhiteboardManager, browser: WhiteboardBrowser,
             raise HTTPException(status_code=400, detail="presentation_id is required")
         import httpx
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(f"{base}/api/presentation/{pid}", headers=_workspace_api_key_headers())
-        if resp.status_code != 200:
+            resp = await client.get(f"{base}/presentations/{pid}", headers=_workspace_api_key_headers())
+        pres = resp.json() if resp.status_code == 200 else {}
+        if resp.status_code != 200 or "html" not in pres:
             raise HTTPException(status_code=404, detail=f"presentation '{pid}' not found")
-        pres = resp.json()
         board = mgr.set_html(board_id, pres["html"], title=pres.get("title"), source_presentation_id=pid)
         await mgr.broadcast({"type": "whiteboard_update", "action": "set",
                              "board": mgr._to_dict(board, include_html=False)})
@@ -252,11 +252,13 @@ def build_routes(ctx, mgr: WhiteboardManager, browser: WhiteboardBrowser,
         title = (data or {}).get("title") or board.title
         import httpx
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.put(f"{base}/api/presentation/{pid}",
+            resp = await client.put(f"{base}/presentations/{pid}",
                                     json={"title": title, "html": board.html},
                                     headers=_workspace_api_key_headers())
-        if resp.status_code >= 400:
-            raise HTTPException(status_code=resp.status_code, detail="presentation save failed")
+        ok = resp.status_code == 200 and resp.json().get("success", True)
+        if not ok:
+            raise HTTPException(status_code=404 if resp.status_code == 200 else resp.status_code,
+                                detail="presentation save failed")
         mgr.set_html(board_id, board.html, source_presentation_id=pid)
         return {"success": True, "presentation_id": pid, "action": "saved"}
 
