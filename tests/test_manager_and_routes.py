@@ -183,6 +183,33 @@ def test_load_presentation_sends_workspace_api_key_header(configured_client, mon
     assert headers.get("X-Api-Key") == "the-shared-key"
 
 
+def test_load_presentation_hits_aw_presentations_own_route_shape(configured_client):
+    """Regression for the gap where this called a made-up ``/api/presentation/{id}``
+    path that aw-app-presentations never exposed — the real route (routes.py's
+    ``get_presentation``) lives at ``<base>/presentations/{id}``."""
+    resp = configured_client.post("/boards/main/load_presentation", json={"presentation_id": "x"})
+
+    assert resp.status_code == 200
+    method, url, _ = _FakeAsyncClient.calls[-1]
+    assert method == "GET"
+    assert url == "http://fake-presentations/presentations/x"
+
+
+def test_load_presentation_404s_on_aw_presentations_not_found_shape(configured_client, monkeypatch):
+    """aw-app-presentations' GET /presentations/{id} answers an unknown id with
+    HTTP 200 and ``{"success": false}`` rather than a 404 — this must still
+    surface as a clean 404, not a 500 from a missing ``html`` key."""
+    async def _get_not_found(self, url, headers=None):
+        _FakeAsyncClient.calls.append(("GET", url, headers or {}))
+        return _FakeResponse(200, {"error": "Presentation not found", "success": False})
+
+    monkeypatch.setattr(_FakeAsyncClient, "get", _get_not_found)
+
+    resp = configured_client.post("/boards/main/load_presentation", json={"presentation_id": "missing"})
+
+    assert resp.status_code == 404
+
+
 def test_save_presentation_sends_workspace_api_key_header(configured_client, monkeypatch):
     monkeypatch.setenv("AW_WORKSPACE_API_KEY", "the-shared-key")
     configured_client.put("/boards/main", json={"html": "<p>x</p>"})
@@ -193,6 +220,17 @@ def test_save_presentation_sends_workspace_api_key_header(configured_client, mon
     method, url, headers = _FakeAsyncClient.calls[-1]
     assert method == "PUT"
     assert headers.get("X-Api-Key") == "the-shared-key"
+
+
+def test_save_presentation_hits_aw_presentations_own_route_shape(configured_client):
+    configured_client.put("/boards/main", json={"html": "<p>x</p>"})
+
+    resp = configured_client.post("/boards/main/save_presentation", json={"presentation_id": "x"})
+
+    assert resp.status_code == 200
+    method, url, _ = _FakeAsyncClient.calls[-1]
+    assert method == "PUT"
+    assert url == "http://fake-presentations/presentations/x"
 
 
 def test_no_api_key_header_when_env_var_unset(configured_client, monkeypatch):
